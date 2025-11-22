@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 615501dbe4f3fe94fbf4b564abb10237, type: 3}
+  m_Name: ModConfig
+  m_EditorClassIdentifier: 
+  id: limeArrowsModule
+  title: Lime Arrows
+  author: Anschley
+  description: "Lime Arrows - 1.0\n\r\n\r\nDetermine which lime directional button
+    to press to make your way through a maze while the wind pushes you around.\r\n\r\n\r\nModule
+    ID: LimeArrows\n\r\n\r\nCreated by: Anschley\r\n\r\n\r\nManual available here:
+    https://ktane.timwi.de/HTML/Lime%20Arrows.html\r\n\r\n\r\n=-= Build notes =-=\r\n\r\n=-=
+    1.0\r\n\r\n- Initial Release\r\n"
+  version: 
+  outputFolder: build
+  previewImage: {fileID: 2800000, guid: f11ca1b6ee5cd3c4ca6009bb11a11ac3, type: 3}
