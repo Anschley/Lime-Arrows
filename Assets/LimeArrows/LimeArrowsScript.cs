@@ -47,6 +47,7 @@ public class LimeArrowsScript : MonoBehaviour
 		"DLR", "DL", "DR", "DL", "", "D", "D", "D", "DR"
 	};
 	int currentPositionIndex;
+	string startingCoordinate;
 	string[] mazeColumns = new string[9]
 	{
 		"A", "B", "C", "D", "E", "F", "G", "H", "I"
@@ -251,6 +252,7 @@ public class LimeArrowsScript : MonoBehaviour
 				break;
 		}
 		Debug.LogFormat("[Lime Arrows #{0}] Starting location is {1}.", moduleId, ConvertIndexToCoordinate(currentPositionIndex));
+		startingCoordinate = ConvertIndexToCoordinate(currentPositionIndex);
 	}
 
 	// Determines Maze Exit based on the direction of the starting word

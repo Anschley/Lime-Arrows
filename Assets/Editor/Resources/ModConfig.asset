@@ -14,11 +14,12 @@ MonoBehaviour:
   id: limeArrowsModule
   title: Lime Arrows
   author: Anschley
-  description: "Lime Arrows - 1.0\n\r\n\r\nDetermine which lime directional button
+  description: "Lime Arrows - 1.0\r1\n\r\n\r\nDetermine which lime directional button
     to press to make your way through a maze while the wind pushes you around.\r\n\r\n\r\nModule
-    ID: LimeArrows\n\r\n\r\nCreated by: Anschley\r\n\r\n\r\nManual available here:
-    https://ktane.timwi.de/HTML/Lime%20Arrows.html\r\n\r\n\r\n=-= Build notes =-=\r\n\r\n=-=
-    1.0\r\n\r\n- Initial Release\r\n"
+    ID: limeArrowsModule\r\n\r\n\r\nCreated by: Anschley\r\n\r\n\r\nManual available
+    here: https://ktane.timwi.de/HTML/Lime%20Arrows.html\r\n\r\n\r\n=-= Build notes
+    =-=\r\n\r\n=-= 1.0\r\n\r\n- Initial Release\n\n=-= 1.0\r1\n\n- Bug fix: Module
+    not showing up in #mods-major"
   version: 
   outputFolder: build
   previewImage: {fileID: 2800000, guid: f11ca1b6ee5cd3c4ca6009bb11a11ac3, type: 3}
