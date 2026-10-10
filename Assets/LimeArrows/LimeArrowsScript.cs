@@ -507,6 +507,11 @@ public class LimeArrowsScript : MonoBehaviour
 
         yield return null;
         yield return buttonsToPress;
+
+		if (moduleSolved)
+		{
+			yield return "solve";
+		}
     }
 
 
