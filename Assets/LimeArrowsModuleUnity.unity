@@ -231,11 +231,16 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 4930718730688702, guid: 0bccc63a071606a4893018b827049218, type: 2}
       propertyPath: m_RootOrder
-      value: 1
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1682077358631216, guid: 0bccc63a071606a4893018b827049218, type: 2}
       propertyPath: m_Name
       value: LimeArrows
+      objectReference: {fileID: 0}
+    - target: {fileID: 114863941599356566, guid: 0bccc63a071606a4893018b827049218,
+        type: 2}
+      propertyPath: _seed
+      value: 1742
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 0bccc63a071606a4893018b827049218, type: 2}
@@ -277,7 +282,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 439642, guid: 8814ea52310d2614a9feda02ec355ae4, type: 2}
       propertyPath: m_RootOrder
-      value: 3
+      value: 2
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 8814ea52310d2614a9feda02ec355ae4, type: 2}
@@ -345,5 +350,5 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 2
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
