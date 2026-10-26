@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
@@ -12,29 +13,17 @@ public class LimeArrowsScript : MonoBehaviour
 	// Keyword
 	int currentKeywordTableIndex;
 	string selectedKeyword;
-	string[] allPossibleKeywords = new string[36]
-	{
-		"ACTIVE", "ENERGY", "INSANE", "MELODY", "PORTAL", "TECHNO",
-		"ALWAYS", "EXPERT", "ISLAND", "NARROW", "QUARKS", "TOGGLE",
-		"BIONIC", "FAULTY", "JETWAY", "NOISES", "RECOIL", "UPLOAD",
-		"CANYON", "GLOBAL", "KARATE", "OFFSET", "REPLAY", "WORLDS",
-		"CLOVER", "GRAVEL", "LETHAL", "OUTPUT", "STREAK", "YOGURT",
-		"DECODE", "HORNET", "LOUNGE", "PIGEON", "STRING", "ZENITH"
-	};
-	string[] movementDirectionsTable = new string[36]
-	{
-		"R", "U", "D", "R", "L", "U",
-		"D", "R", "U", "L", "U", "R",
-		"L", "D", "R", "D", "L", "U",
-		"D", "U", "L", "R", "D", "L",
-		"U", "L", "D", "U", "R", "D",
-		"L", "R", "U", "L", "D", "R"
-	};
+	// Those two tables are populated by Ruleseed
+	string[] keywordTable;
+	string[] movementDirectionsTable;
 	public TextMesh keywordTextRenderer;
 	string targetExitDirection;
 
-	// Maze
-	string[] maze = new string[81]
+	string serialNumberWindDirection = "D";
+	string serialNumberWindlessDirection = "R";
+
+    // Maze
+    string[] maze = new string[81]
 	{
 		"UL", "U", "UR", "UL", "", "U", "U", "U", "UDR",
 		"LR", "LR", "DL", "", "R", "DL", "R", "L", "UR",
@@ -99,7 +88,10 @@ public class LimeArrowsScript : MonoBehaviour
 
 	// Edgework
 	public KMBombInfo bombInfo;
-	bool shouldGoDown;
+	bool shouldUseWindCondition;
+
+	// Ruleseed
+	public KMRuleSeedable ruleseedManager;
 
 	// Logging Data - Formatting and naming from Royal_Flu$h
 	static int moduleIdCounter = 1;
@@ -107,10 +99,12 @@ public class LimeArrowsScript : MonoBehaviour
 	private bool moduleSolved;
 
 
-
+	float time;
 	// Buttons gathering & GetComponents
 	void Awake()
 	{
+		time = Time.realtimeSinceStartup;
+
 		// Initialize logging
 		moduleId = moduleIdCounter++;
 
@@ -131,6 +125,8 @@ public class LimeArrowsScript : MonoBehaviour
 	{
 		Debug.LogFormat("[Lime Arrows #{0}] Initializing Module.", moduleId);
 
+		HandleRuleseed();
+
         // Handle Colorblind Mode
         StartCoroutine(HandleColorblindMode());
 	}
@@ -146,27 +142,271 @@ public class LimeArrowsScript : MonoBehaviour
 		yield return null;
 		yield return new WaitForSeconds(0.5f);
         lightsOutModule = false;
+
+
         // Randomly select keyword from list of possible options
         currentKeywordTableIndex = UnityEngine.Random.Range(0, 36);
-        selectedKeyword = allPossibleKeywords[currentKeywordTableIndex];
+        selectedKeyword = keywordTable[currentKeywordTableIndex];
         keywordTextRenderer.text = selectedKeyword;
 		Debug.LogFormat("[Lime Arrows #{0}] The keyword {1} has been selected.", moduleId, selectedKeyword);
+
+
         DetermineTargetExitDirection();
         SelectStartingLocation();
+
         ShowCurrentCoordinate();
+
         // Determining in which direction to move across the table
         string serialNumber = bombInfo.GetSerialNumber();
-        shouldGoDown = Regex.IsMatch(serialNumber, "[WIND]");
+        shouldUseWindCondition = Regex.IsMatch(serialNumber, "[WIND]");
 
-        if (shouldGoDown)
+        if (shouldUseWindCondition)
         {
-            Debug.LogFormat("[Lime Arrows #{0}] Serial Number contains a letter from “WIND”, moving down across the table.", moduleId);
+            Debug.LogFormat("[Lime Arrows #{0}] Serial Number contains a letter from “WIND”, moving {1} across the table.",
+				moduleId, GetFullDirectionName(serialNumberWindDirection));
         }
         else
         {
-            Debug.LogFormat("[Lime Arrows #{0}] Serial Number doesn't contain a letter from “WIND”, moving right across the table.", moduleId);
+            Debug.LogFormat("[Lime Arrows #{0}] Serial Number doesn't contain a letter from “WIND”, moving {1} across the table.",
+				moduleId, GetFullDirectionName(serialNumberWindlessDirection));
         }
     }
+
+	
+
+    void HandleRuleseed()
+	{
+		MonoRandom Rng = ruleseedManager.GetRNG();
+        Debug.LogFormat("[Lime Arrows #{0}] Using Ruleseed {1}:", moduleId, Rng.Seed);
+
+		// Loading data for Rule Seed 1
+		if (Rng.Seed == 1)
+		{
+            movementDirectionsTable = new string[36] {
+			    "R", "U", "D", "R", "L", "U",
+			    "D", "R", "U", "L", "U", "R",
+			    "L", "D", "R", "D", "L", "U",
+			    "D", "U", "L", "R", "D", "L",
+			    "U", "L", "D", "U", "R", "D",
+			    "L", "R", "U", "L", "D", "R"
+			};
+
+            keywordTable = new string[36]
+			{
+			    "ACTIVE", "ENERGY", "INSANE", "MELODY", "PORTAL", "TECHNO",
+			    "ALWAYS", "EXPERT", "ISLAND", "NARROW", "QUARKS", "TOGGLE",
+			    "BIONIC", "FAULTY", "JETWAY", "NOISES", "RECOIL", "UPLOAD",
+			    "CANYON", "GLOBAL", "KARATE", "OFFSET", "REPLAY", "WORLDS",
+			    "CLOVER", "GRAVEL", "LETHAL", "OUTPUT", "STREAK", "YOGURT",
+			    "DECODE", "HORNET", "LOUNGE", "PIGEON", "STRING", "ZENITH"
+			};
+
+            serialNumberWindDirection = "D";
+            serialNumberWindlessDirection = "R";
+            return;
+        }
+
+		// Simply generates the first Grid it finds
+		int?[] grid = RecurseThroughGrid(new int?[36], Rng);
+
+        string[] directionTranslation = new string[4] { "U", "D", "L", "R" };
+        movementDirectionsTable = grid.Select(x => directionTranslation[x.Value]).ToArray();
+
+        Debug.LogFormat("<Lime Arrows #{0}> Letter Grid: {1}", moduleId, movementDirectionsTable.Join());
+
+
+
+        // Keywordtable
+        // All words that can appear due to Ruleseed
+        string[][] allowedWords = new string[25][] {
+		    new string[]{"ABSORB", "ACTIVE", "ALWAYS", "AMIDST", "APPEAR", "ARTIST", "AXIOMS"},
+		    new string[]{"BEHAVE", "BETTER", "BIONIC", "BOUNCE", "BRONZE", "BUBBLE", "BUTTER"},
+		    new string[]{"CANYON", "CLOVER", "CREATE", "CYBORG", "CLOVER", "COBWEB"},
+		    new string[]{"DAZZLE", "DECODE", "DITHER", "DIVIDE", "DOCTOR", "DRAGON", "DYNAMO"},
+		    new string[]{"ECHOES", "ENERGY", "ENIGMA", "ERASER", "ESTATE", "EXPERT"},
+		    new string[]{"FACTOR", "FATHOM", "FAULTY", "FENCER", "FILLER", "FJORDS", "FOLDER"},
+		    new string[]{"GADGET", "GALAXY", "GENOME", "GLOBAL", "GLOOMY", "GRAVEL", "GROUND"},
+		    new string[]{"HADRON", "HEALTH", "HELIUM", "HICCUP", "HOLLOW", "HORNET"},
+		    new string[]{"ICEBOX", "ICONIC", "IGNITE", "IONIZE", "INFECT", "INSANE", "ISLAND"},
+		    new string[]{"JACKET", "JETLAG", "JESTER", "JETWAY", "JUNIOR"},
+		    new string[]{"KABOOM", "KARATE", "KELVIN", "KIDNEY", "KINDLE", "KLAXON", "KNIGHT"},
+		    new string[]{"LAPTOP", "LEGATO", "LETHAL", "LESSON", "LICHEN", "LOUNGE", "LUXURY"},
+		    new string[]{"MAGNET", "MARTYR", "MATRIX", "MELODY", "MIXING", "MURDER", "MYTHIC"},
+		    new string[]{"NARROW", "NATURE", "NAVAJO", "NETHER", "NOISES", "NOUGHT"},
+		    new string[]{"OBLONG", "OCCUPY", "OFFSET", "OUTPUT", "OXYGEN"},
+		    new string[]{"PIGEON", "PISTOL", "PORTRY", "PORTAL", "PRAXIS", "PRINCE", "PURPLE"},
+		    new string[]{"QUAINT", "QUARKS", "QUARTZ", "QUEBEC", "QUENCH", "QUICHE", "QUOTES"},
+		    new string[]{"RAPTOR", "RECOIL", "REPLAY", "REMEDY", "ROTTEN"},
+		    new string[]{"SCIONS", "SILVER", "SOCIAL", "SOURCE", "STREAK", "STRING"},
+		    new string[]{"TECHNO", "THESIS", "TICKET", "TIMBER", "TOGGLE", "TUMBLE"},
+		    new string[]{"UNIQUE", "UPDATE", "UPLOAD", "URCHIN", "USEFUL", "UTOPIA"},
+		    new string[]{"VALLEY", "VELVET", "VIABLE", "VICTOR", "VIRTUE", "VISUAL"},
+		    new string[]{"WAITER", "WEALTH", "WEIGHT", "WRITER", "WORLDS"},
+		    new string[]{"YELLED", "YELLOW", "YIELDS", "YOGURT", "YONDER"},
+		    new string[]{"ZAGGED", "ZENITH", "ZIPPER", "ZODIAC", "ZOOMED", "ZOMBIE"}
+		};
+
+		// How many words of each of the 25 letters will appear in the final table
+		int[] wordsPerLetter = Rng.ShuffleFisherYates(new int[] { 2, 1, 1, 1, 2, 1, 2, 1, 2, 1, 1, 2, 1, 2, 2, 2, 1, 2, 2, 2, 1, 1, 1, 1, 1 });
+
+		List<string> words = new List<string>();
+		for (int i = 0; i < 25; i++)
+		{
+			string[] shuffledWords = Rng.ShuffleFisherYates(allowedWords[i]);
+			for (int j = 0; j < wordsPerLetter[i]; j++)
+			{
+				words.Add(shuffledWords[j]);
+			}
+		}
+		words.Sort();
+        keywordTable = new string[36];
+		// Transpose the table since words in the table are ordered vertically and not in reading order
+		for (int i = 0; i < 6; i++)
+		{
+			for (int j = 0; j < 6; j++)
+			{
+				keywordTable[i * 6 + j] = words[j * 6 + i];
+			}
+		}
+
+        Debug.LogFormat("<Lime Arrows #{0}> Word Grid: {1}", moduleId, keywordTable.Join());
+
+
+		// Direction for moving inside of the table
+        string[] selectedDirections = new string[4] { "U", "D", "L", "R"};
+		Rng.ShuffleFisherYates(selectedDirections);
+		serialNumberWindDirection = selectedDirections[0];
+		serialNumberWindlessDirection = selectedDirections[1];
+
+        Debug.LogFormat("<Lime Arrows #{0}> Direction if Serial Number contains WIND: {1}; otherwise: {2}", moduleId,
+			GetFullDirectionName(serialNumberWindDirection), GetFullDirectionName(serialNumberWindlessDirection));
+    }
+
+    // Current worst Ruleseed found: 9267.
+    // 10,232 recursions for a final grid in 0.200s
+
+    // int totalSteps;
+    int?[] RecurseThroughGrid(int?[] currentGrid, MonoRandom Rng)
+	{		
+		// If all cells have a value => we have a valid board and we can return it!! 
+		if (currentGrid.All(d => d.HasValue))
+		{ return currentGrid; }
+
+		// totalSteps++;
+
+
+        int row;
+		int col;
+		int bestCell = -1;
+		int fewestPossibilities = int.MaxValue;
+
+		int _evaluationPossibilities;
+
+        // Make a verification pass to fill the cells with the lowest amount
+        // of available directions (using limited rules)
+        // This ensures that we maximize efficiency by not filling cells that are "free"
+        // that end up constraining other cells into impossibility; which makes less iterations overall
+        for (int i = 0; i < 36; i++)
+		{
+            if (currentGrid[i].HasValue) { continue; }
+
+            row = i / 6;
+            col = i % 6;
+
+			// Check, for all 4 direction possibilities, how many are valid,
+			// using the quickest rule to test that's also restrictive: immediate neighbors
+			_evaluationPossibilities = new int[4] { 0, 1, 2, 3 }.Count(x =>
+				(row == 0 || currentGrid[i - 6] != x) && // Up
+				(row == 5 || currentGrid[i + 6] != x) && // Down
+				(col == 0 || currentGrid[i - 1] != x) && // Left
+				(col == 5 || currentGrid[i + 1] != x)); // Right)
+
+
+            // We found a cell that's the least free
+            if (_evaluationPossibilities < fewestPossibilities)
+			{
+				bestCell = i;
+				// If this cell has only 1 possibility, fill it immediately
+				if (_evaluationPossibilities == 1)
+				{
+					break;
+				}
+
+                fewestPossibilities = _evaluationPossibilities;
+            }
+        }
+
+        // Then, test this singular cell to determine if it's correct!
+        row = bestCell / 6;
+        col = bestCell % 6;
+        
+        int[] fullRow = new int[6] { 6 * row, 6 * row + 1, 6 * row + 2, 6 * row + 3, 6 * row + 4, 6 * row + 5 };
+        int[] fullCol = new int[6] { col, col + 6, col + 12, col + 18, col + 24, col + 30 };
+
+		// Then, we cycle through all possible directions to put in the cell
+		// and determine if one passes all tests to keep the cell and grid state as valid
+		// We still need to verify every condition
+		// Using Ruleseed to get which colour to start with
+		int colourOffset = Rng.Next(0, 4);
+
+        for (int i = 0; i < 4; i++)
+        {
+			int dir = (i + colourOffset) % 4;
+
+            // Test B: None of its neighbors are already the same
+            // Check that they are all valid, then invert
+            if (((row == 0 || currentGrid[bestCell - 6] != dir) && // Up
+                 (row == 5 || currentGrid[bestCell + 6] != dir) && // Down
+                 (col == 0 || currentGrid[bestCell - 1] != dir) && // Left
+                 (col == 5 || currentGrid[bestCell + 1] != dir)) == false) // Right
+            { continue; }
+
+            
+            // Test C.i: The current row doesn't contain this value twice already
+            if (fullRow.Count(x => currentGrid[x] == dir) == 2) { continue; }
+            // Test C.ii: ditto for the columns
+            if (fullCol.Count(x => currentGrid[x] == dir) == 2) { continue; }
+
+
+            // Test A: The grid shouldn't have 9 of it already
+            if (currentGrid.Count(x => x == dir) == 9) { continue; }
+
+
+            // Test D.i: The current row will have enough room to have the other values inside of it
+            // For those tests, add the colour and check the validity
+            currentGrid[bestCell] = dir;
+
+            int numberOfDirections = fullRow.Where(x => currentGrid[x].HasValue).Select(x => currentGrid[x]).Distinct().Count();
+            if (fullRow.Count(x => currentGrid[x] == null) < 4 - numberOfDirections)
+            {
+                currentGrid[bestCell] = null; continue;
+            }
+            // Test D.ii: ditto for the columns
+            numberOfDirections = fullCol.Where(x => currentGrid[x].HasValue).Select(x => currentGrid[x]).Distinct().Count();
+            if (fullCol.Count(x => currentGrid[x] == null) < 4 - numberOfDirections)
+            {
+                currentGrid[bestCell] = null; continue;
+            }
+
+            // If we land here, we have a valid colour!
+            // Check the branches, hoping we get a valid one
+            if (RecurseThroughGrid(currentGrid, Rng) != null)
+            {
+                // If we're here, the branches have returned something valid and found a valid grid that we pass back up
+                return currentGrid;
+            }
+
+            // If we're here, the colour WAS valid, but all possibilities down the road are worse-off
+            // We need to erase the current grid before anything!
+            currentGrid[bestCell] = null;
+            continue;
+        }
+
+        // If we land here, we have tried every direction, so this cell is invalid in this current puzzle configuration and we must quit instantly
+        return null;
+	}
+
+
 
 	// Full Direction Name for Log
 	string GetFullDirectionName(string shortendName)
@@ -408,28 +648,37 @@ public class LimeArrowsScript : MonoBehaviour
 		{
 			return;
 		}
-			MoveInMaze(movementDirectionsTable[currentKeywordTableIndex], false);
-		if (shouldGoDown)
+
+		MoveInMaze(movementDirectionsTable[currentKeywordTableIndex], false);
+
+		string dir;
+		if (shouldUseWindCondition)
+		{ dir = serialNumberWindDirection; }
+        else
+        { dir = serialNumberWindlessDirection; }
+
+		switch (dir)
 		{
-			if (currentKeywordTableIndex >=30)
-			{
-				currentKeywordTableIndex -= 30;
-			}
-			else
-			{
-				currentKeywordTableIndex += 6;
-            }
-		}
-		else
-		{
-			if (currentKeywordTableIndex % 6 == 5)
-			{
-				currentKeywordTableIndex -= 5;
-			}
-			else
-			{
-                currentKeywordTableIndex += 1;
-            }
+			case "U":
+                if (currentKeywordTableIndex <= 5)
+                { currentKeywordTableIndex += 30; }
+                else { currentKeywordTableIndex -= 6; }
+                break;
+			case "D":
+                if (currentKeywordTableIndex >= 30)
+                { currentKeywordTableIndex -= 30; }
+                else { currentKeywordTableIndex += 6; }
+                break;
+			case "L":
+                if (currentKeywordTableIndex % 6 == 0)
+                { currentKeywordTableIndex += 5; }
+                else { currentKeywordTableIndex -= 1; }
+                break;
+			case "R":
+                if (currentKeywordTableIndex % 6 == 5)
+                { currentKeywordTableIndex -= 5; }
+                else { currentKeywordTableIndex += 1; }
+                break;
 		}
 	}
 
